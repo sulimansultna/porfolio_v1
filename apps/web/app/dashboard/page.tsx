@@ -1,16 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { MessageCircle, Send, Home, User, Settings, BarChart3, FileText, Moon, Sun, ArrowLeft } from "lucide-react"
+import { MessageCircle, Send, Home, User, Settings, BarChart3, FileText, Moon, Sun, ArrowLeft, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import MinimalisticDashboard3D from "./components/minimalistic-3d"
+import ProjectManagement from "./projects/page";
+import ResumeUpload from "./resume/page";
+import EducationManagement from "./education/page";
+import EducationManagement from "./education/page";
+import EducationManagement from "./education/page";
+import ExperienceManagement from "./experience/page";
 
 interface Message {
   id: number
@@ -31,6 +38,20 @@ export default function Dashboard() {
   const [inputValue, setInputValue] = useState("")
   const [activeTab, setActiveTab] = useState("chat")
   const { theme, setTheme } = useTheme()
+  const router = useRouter();
+
+  useEffect(() => {
+    // Basic authentication check
+    const isAuthenticated = localStorage.getItem('adminLoggedIn');
+    if (!isAuthenticated) {
+      router.push('/dashboard/login');
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminLoggedIn');
+    router.push('/dashboard/login');
+  };
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return
@@ -70,7 +91,11 @@ export default function Dashboard() {
     { id: "overview", icon: Home, label: "Overview" },
     { id: "profile", icon: User, label: "Profile" },
     { id: "analytics", icon: BarChart3, label: "Analytics" },
-    { id: "projects", icon: FileText, label: "Projects" },
+    { id: "projects", icon: FileText, label: "Project Management" },
+    { id: "blog", icon: FileText, label: "Blog Management" },
+    { id: "resume", icon: FileText, label: "Resume Upload" },
+    { id: "experience", icon: FileText, label: "Experience Management" },
+    { id: "education", icon: FileText, label: "Education Management" },
     { id: "settings", icon: Settings, label: "Settings" },
   ]
 
@@ -126,6 +151,16 @@ export default function Dashboard() {
               ) : (
                 <Moon className="h-4 w-4 text-blue-500" />
               )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="transition-all duration-300 hover:scale-105"
+              aria-label="Logout from dashboard"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
@@ -281,7 +316,13 @@ export default function Dashboard() {
             </div>
           )}
 
-          {activeTab !== "chat" && activeTab !== "overview" && (
+          {activeTab === "projects" && <ProjectManagement />}
+          {activeTab === "blog" && <BlogManagement />}
+          {activeTab === "resume" && <ResumeUpload />}
+          {activeTab === "experience" && <ExperienceManagement />}
+          {activeTab === "education" && <EducationManagement />}
+
+          {activeTab !== "chat" && activeTab !== "overview" && activeTab !== "projects" && activeTab !== "blog" && activeTab !== "resume" && activeTab !== "experience" && activeTab !== "education" && (
             <div className="p-6 flex items-center justify-center h-full">
               <Card className="max-w-md">
                 <CardHeader>
@@ -295,7 +336,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-          )}
+          )}}
         </main>
       </div>
     </div>
