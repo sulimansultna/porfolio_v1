@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -57,35 +59,42 @@ export default function Portfolio() {
     { name: "UI/UX Design", level: 82, icon: <Palette className="h-5 w-5" /> },
   ]
 
-  const projects = [
-    {
-      title: "Gas Level Detection & Auto Booking System",
-      description:
-        "IoT-based smart solution that monitors gas levels using sensors and automatically books refills when needed, featuring real-time notifications and mobile app integration",
-      image: "/images/gas-detection.png",
-      tech: ["Flutter", "Firebase", "IoT", "NodeMCU", "GSM"],
-      github: "https://github.com/sulimansultna",
-      demo: "#",
-    },
-    {
-      title: "E-Commerce Mobile App",
-      description:
-        "Full-featured shopping app with real-time inventory management, secure payment integration, and intuitive user experience following Nielsen's usability principles",
-      image: "/images/ecommerce-app.png",
-      tech: ["Flutter", "Firebase", "Stripe", "UI/UX"],
-      github: "https://github.com/sulimansultna",
-      demo: "#",
-    },
-    {
-      title: "Academy Portal App",
-      description:
-        "Comprehensive educational platform for academy management with student enrollment, course tracking, assignments, and progress monitoring features",
-      image: "/images/academy-portal.png",
-      tech: ["Flutter", "Firebase", "Dart", "UI/UX"],
-      github: "https://github.com/sulimansultna",
-      demo: "#",
-    },
-  ]
+  const [projects, setProjects] = useState<any[]>([]);
+  const [experience, setExperience] = useState<any[]>([]);
+  const [education, setEducation] = useState<any[]>([]);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch Projects
+      const projectsCollection = collection(db, "projects");
+      const projectsSnapshot = await getDocs(query(projectsCollection, orderBy("createdAt", "desc")));
+      const projectsData = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setProjects(projectsData);
+
+      // Fetch Experience
+      const experienceCollection = collection(db, "experience");
+      const experienceSnapshot = await getDocs(query(experienceCollection, orderBy("startDate", "desc")));
+      const experienceData = experienceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setExperience(experienceData);
+
+      // Fetch Education
+      const educationCollection = collection(db, "education");
+      const educationSnapshot = await getDocs(query(educationCollection, orderBy("year", "desc")));
+      const educationData = educationSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setEducation(educationData);
+
+      // Fetch Resume URL (assuming you store it in a document, e.g., 'settings/resume')
+      // You'll need to create this document in Firestore manually or via the dashboard later
+      const resumeDocRef = doc(db, "settings", "resume");
+      const resumeDocSnap = await getDoc(resumeDocRef);
+      if (resumeDocSnap.exists()) {
+        setResumeUrl(resumeDocSnap.data().url);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -200,56 +209,63 @@ export default function Portfolio() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {projects.map((project, index) => (
-            <Card key={index} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
-              <div className="aspect-video overflow-hidden">
-                <img
-                  src={project.image || "/placeholder.svg"}
-                  alt={`${project.title} - Screenshot showing the application interface`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading={index === 0 ? "eager" : "lazy"}
-                />
-              </div>
-              <CardHeader>
-                <CardTitle className="group-hover:text-primary transition-colors">{project.title}</CardTitle>
-                <CardDescription>{project.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {project.tech.map((tech, techIndex) => (
-                    <Badge key={techIndex} variant="secondary">
-                      {tech}
-                    </Badge>
-                  ))}
+          {projects.length === 0 ? (
+            <p className="text-center text-muted-foreground">No projects to display yet.</p>
+          ) : (
+            projects.map((project, index) => (
+              <Card key={index} className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                <div className="aspect-video overflow-hidden">
+                  <img
+                    src={project.image || "/placeholder.svg"}
+                    alt={`${project.title} - Screenshot showing the application interface`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
                 </div>
-                {/* Heuristic 7: Flexibility and efficiency of use - Multiple access points */}
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" asChild>
-                    <a
-                      href={project.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`View ${project.title} source code on GitHub`}
-                    >
-                      <Github className="mr-2 h-4 w-4" />
-                      Code
-                    </a>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <a
-                      href={project.demo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`View ${project.title} live demo`}
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Demo
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardHeader>
+                  <CardTitle className="group-hover:text-primary transition-colors">{project.title}</CardTitle>
+                  <CardDescription>{project.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {project.tech && project.tech.map((tech: string, techIndex: number) => (
+                      <Badge key={techIndex} variant="secondary">
+                        {tech}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    {project.github && (
+                      <Button size="sm" variant="outline" asChild>
+                        <a
+                          href={project.github}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`View ${project.title} source code on GitHub`}
+                        >
+                          <Github className="mr-2 h-4 w-4" />
+                          Code
+                        </a>
+                      </Button>
+                    )}
+                    {project.demo && (
+                      <Button size="sm" asChild>
+                        <a
+                          href={project.demo}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`View ${project.title} live demo`}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Demo
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </section>
 
@@ -316,46 +332,30 @@ export default function Portfolio() {
               <h3 className="text-xl font-semibold mb-4">Professional Experience</h3>
 
               <div className="space-y-6">
-                <div className="border-l-4 border-primary pl-6">
-                  <h4 className="font-semibold text-lg">Mobile App Developer (Internship)</h4>
-                  <p className="text-primary font-medium">TechNova Solutions • Near COMSATS University, Abbottabad</p>
-                  <p className="text-sm text-muted-foreground mb-3">Jan 2023 - Jul 2025</p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>• Contributed to client-based mobile applications using Flutter and Firebase</li>
-                    <li>• Implemented Firebase features: Firestore, Authentication, and Cloud Messaging</li>
-                    <li>• Built responsive UI and custom widgets for cross-device compatibility</li>
-                    <li>• Gained experience with API integration, Git version control, and agile methodology</li>
-                    <li>• Participated in code reviews, daily stand-ups, and deployment cycles</li>
-                  </ul>
-                </div>
-
-                <div className="border-l-4 border-purple-500 pl-6">
-                  <h4 className="font-semibold text-lg">Freelance Mobile App Developer</h4>
-                  <p className="text-purple-500 font-medium">Self-Initiated Projects & Client Work</p>
-                  <p className="text-sm text-muted-foreground mb-3">Mar 2023 - Present</p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>• Built cross-platform mobile apps with smooth UI/UX across Android and iOS</li>
-                    <li>• Integrated comprehensive Firebase services for full-stack solutions</li>
-                    <li>• Developed IoT systems with NodeMCU, sensors, and GSM modules</li>
-                    <li>• Created inventory management and attendance tracking applications</li>
-                    <li>• Implemented role-based access control and real-time data synchronization</li>
-                  </ul>
-                </div>
+                {experience.map((exp, index) => (
+                  <div key={index} className="border-l-4 border-primary pl-6">
+                    <h4 className="font-semibold text-lg">{exp.title}</h4>
+                    <p className="text-primary font-medium">{exp.company}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{exp.startDate} - {exp.endDate}</p>
+                    <p className="text-muted-foreground mb-2">{exp.description}</p>
+                    <ul className="space-y-2 text-muted-foreground">
+                      {exp.responsibilities.map((resp: string, idx: number) => (
+                        <li key={idx}>• {resp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
 
               <h3 className="text-xl font-semibold mb-4 mt-8">Education</h3>
               <div className="bg-muted/50 rounded-lg p-6">
-                <h4 className="font-semibold text-lg">Bachelor of Science in Computer Science</h4>
-                <p className="text-primary font-medium">COMSATS University Islamabad – Abbottabad Campus</p>
-                <p className="text-sm text-muted-foreground mb-3">Sep 2021 - 2025 • CGPA: 2.4</p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Specialized in Flutter app development, Firebase integration, and IoT systems</li>
-                  <li>• Completed 42 subjects covering core CS topics: Algorithms, Databases, OS, AI, HCI</li>
-                  <li>
-                    • <strong>Scholarship:</strong> Fully Funded Scholarship for Afghan Students (Allama Iqbal
-                    Scholarship)
-                  </li>
-                </ul>
+                {education.map((edu, index) => (
+                  <div key={index} className="mb-4 last:mb-0">
+                    <h4 className="font-semibold text-lg">{edu.degree}</h4>
+                    <p className="text-primary font-medium">{edu.institution}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{edu.year} • {edu.description}</p>
+                  </div>
+                ))}
               </div>
 
               <h3 className="text-xl font-semibold mb-4 mt-8">Languages</h3>
@@ -470,8 +470,8 @@ export default function Portfolio() {
               <p className="text-sm text-muted-foreground mb-4">
                 Get my complete resume with detailed project information and technical skills.
               </p>
-              <Button className="w-full" asChild>
-                <a href="/resume-suliman-sultan.pdf" download="Suliman_Sultan_Resume.pdf">
+              <Button className="w-full" asChild disabled={!resumeUrl}>
+                <a href={resumeUrl || "#"} target="_blank" rel="noopener noreferrer" download="Suliman_Sultan_Resume.pdf">
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF Resume
                 </a>
